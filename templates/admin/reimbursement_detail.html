@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>报销详情</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: #f5f5f5;
+        }
+        
+        .navbar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .navbar h1 {
+            font-size: 20px;
+        }
+        
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            margin-left: 20px;
+            padding: 8px 15px;
+            border-radius: 5px;
+            transition: background 0.3s;
+        }
+        
+        .nav-links a:hover {
+            background: rgba(255,255,255,0.2);
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .card h2 {
+            margin-bottom: 20px;
+            color: #333;
+            font-size: 18px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        
+        .detail-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+        
+        .detail-item {
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 8px;
+        }
+        
+        .detail-label {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        
+        .detail-value {
+            font-size: 16px;
+            color: #333;
+            font-weight: 500;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 6px 15px;
+            border-radius: 15px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .status-badge.pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .status-badge.accepted {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status-badge.rejected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .attachment-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        
+        .attachment-item {
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            transition: all 0.3s;
+            position: relative;
+        }
+        
+        .attachment-item:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .attachment-icon {
+            font-size: 40px;
+            margin-bottom: 10px;
+        }
+        
+        .attachment-name {
+            font-size: 13px;
+            color: #555;
+            word-break: break-all;
+            margin-bottom: 10px;
+        }
+        
+        .attachment-actions {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+        }
+        
+        .attachment-link {
+            display: inline-block;
+            padding: 6px 12px;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 12px;
+            transition: background 0.3s;
+        }
+        
+        .attachment-link:hover {
+            background: #5568d3;
+        }
+        
+        .attachment-link.download {
+            background: #28a745;
+        }
+        
+        .attachment-link.download:hover {
+            background: #218838;
+        }
+        
+        /* 预览弹窗 */
+        .preview-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+        
+        .preview-modal.show {
+            display: flex;
+        }
+        
+        .preview-content {
+            max-width: 95%;
+            max-height: 90vh;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .preview-content img {
+            max-width: 100%;
+            max-height: 85vh;
+            border-radius: 8px;
+            object-fit: contain;
+        }
+        
+        .preview-content iframe {
+            width: 90vw;
+            height: 85vh;
+            border: none;
+            border-radius: 8px;
+            background: white;
+        }
+        
+        .close-preview {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            font-size: 40px;
+            color: white;
+            cursor: pointer;
+            z-index: 2001;
+        }
+        
+        .close-preview:hover {
+            color: #ccc;
+        }
+        
+        .preview-title {
+            color: white;
+            margin-top: 20px;
+            font-size: 16px;
+        }
+        
+        .audit-section {
+            margin-top: 20px;
+        }
+        
+        .audit-form {
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+            font-weight: 500;
+        }
+        
+        textarea {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+            resize: vertical;
+            font-family: inherit;
+            min-height: 80px;
+        }
+        
+        .btn-group {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 10px 25px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background 0.3s;
+            text-decoration: none;
+        }
+        
+        .btn:hover {
+            background: #5568d3;
+        }
+        
+        .btn-success {
+            background: #28a745;
+        }
+        
+        .btn-success:hover {
+            background: #218838;
+        }
+        
+        .btn-danger {
+            background: #dc3545;
+        }
+        
+        .btn-danger:hover {
+            background: #c82333;
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+        }
+        
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+        
+        .audit-log-item {
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .audit-log-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 13px;
+            color: #666;
+        }
+        
+        .audit-log-action {
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .audit-log-comment {
+            color: #555;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+        
+        .message {
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .message.success {
+            background-color: #efe;
+            color: #3c3;
+            border: 1px solid #cfc;
+        }
+        
+        .message.error {
+            background-color: #fee;
+            color: #c33;
+            border: 1px solid #fcc;
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <h1>📋 报销详情</h1>
+        <div class="nav-links">
+            <a href="{{ url_for('admin_dashboard') }}">首页</a>
+            <a href="{{ url_for('admin_reimbursements') }}">返回列表</a>
+            <a href="{{ url_for('admin_logout') }}">退出</a>
+        </div>
+    </div>
+    
+    <div class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="message {{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        <div class="card">
+            <h2>基本信息</h2>
+            <div class="detail-grid">
+                <div class="detail-item">
+                    <div class="detail-label">报销日期</div>
+                    <div class="detail-value">{{ reimbursement.submit_date_str }}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">提交时间</div>
+                    <div class="detail-value">{{ reimbursement.submitted_at.strftime('%Y-%m-%d %H:%M:%S') }}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">部门</div>
+                    <div class="detail-value">{{ reimbursement.department }}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">报销人</div>
+                    <div class="detail-value">{{ reimbursement.applicant }}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">金额</div>
+                    <div class="detail-value">¥{{ "%.2f"|format(reimbursement.amount) }}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">状态</div>
+                    <div class="detail-value">
+                        <span class="status-badge {{ reimbursement.status }}">
+                            {% if reimbursement.status == 'pending' %}待处理
+                            {% elif reimbursement.status == 'accepted' %}已受理
+                            {% else %}未受理{% endif %}
+                        </span>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="margin-top: 20px;">
+                <div class="detail-label">用途</div>
+                <div class="detail-value" style="padding: 15px; background: #f9f9f9; border-radius: 8px; margin-top: 5px;">
+                    {{ reimbursement.purpose }}
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>附件列表</h2>
+            {% if reimbursement.attachments.count() > 0 %}
+            <div class="attachment-list">
+                {% for attachment in reimbursement.attachments %}
+                <div class="attachment-item">
+                    <div class="attachment-icon">
+                        {% if attachment.file_type == 'image' %}🖼️
+                        {% elif attachment.file_type == 'pdf' %}📄
+                        {% else %}📎{% endif %}
+                    </div>
+                    <div class="attachment-name">{{ attachment.filename }} 
+                        <small style="color: #999; font-size: 11px;">(类型：{{ attachment.file_type }})</small>
+                    </div>
+                    <div class="attachment-actions">
+                        {% if attachment.file_type == 'image' or attachment.file_type == 'pdf' %}
+                        <a href="#" class="attachment-link" onclick="event.preventDefault(); previewFile('{{ attachment.stored_filename }}', this.getAttribute('data-filename'), '{{ attachment.file_type }}');" data-filename="{{ attachment.filename }}">👁️ 预览</a>
+                        {% else %}
+                        <span style="color: #999; font-size: 12px; margin-right: 8px;">不支持预览</span>
+                        {% endif %}
+                        <a href="{{ url_for('uploaded_file', filename=attachment.stored_filename) }}?download=1" class="attachment-link download">⬇️ 下载</a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <!-- 预览弹窗 -->
+            <div id="previewModal" class="preview-modal">
+                <span class="close-preview" onclick="closePreview()">&times;</span>
+                <div class="preview-content" id="previewContent"></div>
+                <div class="preview-title" id="previewTitle"></div>
+            </div>
+            {% else %}
+            <div style="text-align: center; padding: 30px; color: #999;">暂无附件</div>
+            {% endif %}
+        </div>
+        
+        {% if reimbursement.status == 'pending' %}
+        <div class="card">
+            <h2>审核操作</h2>
+            <div class="audit-form">
+                <form method="POST" action="{{ url_for('admin_audit_reimbursement', id=reimbursement.id) }}">
+                    <div class="form-group">
+                        <label>审核意见</label>
+                        <textarea name="comment" placeholder="请输入审核意见（可选）"></textarea>
+                    </div>
+                    <div class="btn-group">
+                        <button type="submit" name="action" value="accept" class="btn btn-success">✓ 受理</button>
+                        <button type="submit" name="action" value="reject" class="btn btn-danger">✗ 不受理</button>
+                        <a href="{{ url_for('admin_reimbursements') }}" class="btn btn-secondary">返回</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+        
+        <div class="card">
+            <h2>审核日志</h2>
+            {% if audit_logs %}
+            <div class="audit-section">
+                {% for log in audit_logs %}
+                <div class="audit-log-item">
+                    <div class="audit-log-header">
+                        <span class="audit-log-action">
+                            {% if log.action == 'accept' %}✅ 受理
+                            {% elif log.action == 'reject' %}❌ 不受理
+                            {% else %}💬 评论{% endif %}
+                        </span>
+                        <span>{{ log.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</span>
+                    </div>
+                    <div style="font-size: 13px; color: #666;">
+                        审核人：{{ log.user.username }}
+                    </div>
+                    {% if log.comment %}
+                    <div class="audit-log-comment">{{ log.comment }}</div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div style="text-align: center; padding: 30px; color: #999;">暂无审核记录</div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <script>
+        function previewFile(storedFilename, displayName, fileType) {
+            const modal = document.getElementById('previewModal');
+            const content = document.getElementById('previewContent');
+            const previewTitle = document.getElementById('previewTitle');
+            
+            previewTitle.textContent = displayName;
+            
+            // 显示加载状态
+            content.innerHTML = '<div style="color: white; font-size: 18px;">加载中...</div>';
+            modal.classList.add('show');
+            
+            // 对存储文件名进行 URL 编码，防止特殊字符问题
+            const encodedFilename = encodeURIComponent(storedFilename);
+            const fileUrl = "{{ url_for('uploaded_file', filename='') }}" + encodedFilename + '?preview=1';
+            
+            if (fileType === 'image') {
+                const img = new Image();
+                img.src = fileUrl;
+                img.alt = displayName;
+                img.onload = function() {
+                    content.innerHTML = '';
+                    content.appendChild(img);
+                };
+                img.onerror = function() {
+                    content.innerHTML = '<div style="color: #ff6b6b; font-size: 16px; text-align: center;">图片加载失败，请重试</div>';
+                };
+            } else if (fileType === 'pdf') {
+                content.innerHTML = `<iframe src="${fileUrl}" frameborder="0"></iframe>`;
+            }
+        }
+        
+        function closePreview() {
+            const modal = document.getElementById('previewModal');
+            modal.classList.remove('show');
+            document.getElementById('previewContent').innerHTML = '';
+        }
+        
+        // 点击弹窗外部关闭
+        window.onclick = function(event) {
+            const modal = document.getElementById('previewModal');
+            if (event.target === modal) {
+                closePreview();
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户管理</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: #f5f5f5;
+        }
+
+        .navbar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .navbar h1 {
+            font-size: 20px;
+        }
+
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            margin-left: 20px;
+            padding: 8px 15px;
+            border-radius: 5px;
+            transition: background 0.3s;
+        }
+
+        .nav-links a:hover {
+            background: rgba(255,255,255,0.2);
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .card h2 {
+            margin-bottom: 20px;
+            color: #333;
+            font-size: 18px;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: background 0.3s;
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn:hover {
+            background: #5568d3;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        th {
+            background: #f9f9f9;
+            font-weight: 600;
+            color: #555;
+        }
+
+        tr:hover {
+            background: #f9f9f9;
+        }
+
+        .badge {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .badge.admin {
+            background: #667eea;
+            color: white;
+        }
+
+        .badge.operator {
+            background: #17a2b8;
+            color: white;
+        }
+
+        .message {
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .message.success {
+            background-color: #efe;
+            color: #3c3;
+            border: 1px solid #cfc;
+        }
+
+        .message.error {
+            background-color: #fee;
+            color: #c33;
+            border: 1px solid #fcc;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            max-width: 500px;
+            width: 100%;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .close-modal {
+            float: right;
+            font-size: 24px;
+            cursor: pointer;
+            color: #999;
+        }
+
+        .close-modal:hover {
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <h1>👥 用户管理</h1>
+        <div class="nav-links">
+            <a href="{{ url_for('admin_dashboard') }}">首页</a>
+            <a href="{{ url_for('admin_reimbursements') }}">报销管理</a>
+            {% if current_user.is_admin() %}
+            <a href="{{ url_for('admin_auth_codes') }}">授权码</a>
+            <a href="{{ url_for('admin_users') }}">用户</a>
+            {% endif %}
+            <a href="{{ url_for('admin_logs') }}">日志</a>
+            <a href="{{ url_for('admin_logout') }}">退出</a>
+        </div>
+    </div>
+
+    <div class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="message {{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2>管理员列表</h2>
+                <button class="btn" onclick="showCreateModal()">+ 新建用户</button>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>用户名</th>
+                        <th>角色</th>
+                        <th>创建时间</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr>
+                        <td>{{ user.id }}</td>
+                        <td>{{ user.username }}</td>
+                        <td>
+                            <span class="badge {{ user.role }}">
+                                {% if user.role == 'admin' %}管理员
+                                {% else %}操作员{% endif %}
+                            </span>
+                        </td>
+                        <td>{{ user.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td>
+                            <button class="btn" style="padding: 5px 10px; font-size: 12px; background: #17a2b8;" onclick="showPasswordModal({{ user.id }}, '{{ user.username }}')">修改密码</button>
+                            <form method="POST" action="{{ url_for('admin_delete_user', id=user.id) }}" style="display: inline;" onsubmit="return confirm('确定要删除用户 {{ user.username }} 吗？')">
+                                <button type="submit" class="btn" style="padding: 5px 10px; font-size: 12px; background: #dc3545;">删除</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 新建用户弹窗 -->
+    <div id="createModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeModal()">&times;</span>
+            <h2 style="margin-bottom: 20px;">新建用户</h2>
+
+            <form method="POST" action="{{ url_for('admin_create_user') }}">
+                <div class="form-group">
+                    <label>用户名</label>
+                    <input type="text" name="username" required placeholder="请输入用户名">
+                </div>
+
+                <div class="form-group">
+                    <label>密码</label>
+                    <input type="password" name="password" required placeholder="请输入密码">
+                </div>
+
+                <div class="form-group">
+                    <label>角色</label>
+                    <select name="role">
+                        <option value="admin">管理员</option>
+                        <option value="operator">操作员</option>
+                    </select>
+                </div>
+
+                <div style="display: flex; gap: 10px; margin-top: 25px;">
+                    <button type="submit" class="btn" style="flex: 1;">创建</button>
+                    <button type="button" class="btn" onclick="closeModal()" style="flex: 1; background: #6c757d;">取消</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 修改密码弹窗 -->
+    <div id="passwordModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closePasswordModal()">&times;</span>
+            <h2 style="margin-bottom: 20px;">修改密码</h2>
+            <p style="margin-bottom: 20px; color: #666;">正在为用户 <strong id="passwordUsername"></strong> 修改密码</p>
+
+            <form method="POST" id="passwordForm">
+                <div class="form-group">
+                    <label>新密码</label>
+                    <input type="password" name="password" required placeholder="请输入新密码（至少6位）" minlength="6">
+                </div>
+
+                <div style="display: flex; gap: 10px; margin-top: 25px;">
+                    <button type="submit" class="btn" style="flex: 1;">保存</button>
+                    <button type="button" class="btn" onclick="closePasswordModal()" style="flex: 1; background: #6c757d;">取消</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function showCreateModal() {
+            document.getElementById('createModal').classList.add('show');
+        }
+
+        function closeModal() {
+            document.getElementById('createModal').classList.remove('show');
+        }
+
+        function showPasswordModal(userId, username) {
+            document.getElementById('passwordUsername').textContent = username;
+            document.getElementById('passwordForm').action = '/admin/user/' + userId + '/password';
+            document.getElementById('passwordModal').classList.add('show');
+        }
+
+        function closePasswordModal() {
+            document.getElementById('passwordModal').classList.remove('show');
+            document.getElementById('passwordForm').reset();
+        }
+
+        // 点击弹窗外部关闭
+        window.onclick = function(event) {
+            const createModal = document.getElementById('createModal');
+            const passwordModal = document.getElementById('passwordModal');
+            if (event.target === createModal) {
+                closeModal();
+            }
+            if (event.target === passwordModal) {
+                closePasswordModal();
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>报销管理</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: #f5f5f5;
+        }
+        
+        .navbar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .navbar h1 {
+            font-size: 20px;
+        }
+        
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            margin-left: 20px;
+            padding: 8px 15px;
+            border-radius: 5px;
+            transition: background 0.3s;
+        }
+        
+        .nav-links a:hover {
+            background: rgba(255,255,255,0.2);
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+        
+        .filter-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 10px;
+        }
+        
+        .filter-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .filter-group select,
+        .filter-group input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: background 0.3s;
+            border: none;
+            cursor: pointer;
+        }
+        
+        .btn:hover {
+            background: #5568d3;
+        }
+        
+        .btn-reset {
+            background: #6c757d;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        
+        th {
+            background: #f9f9f9;
+            font-weight: 600;
+            color: #555;
+        }
+        
+        tr:hover {
+            background: #f9f9f9;
+        }
+        
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .status-badge.pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .status-badge.accepted {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status-badge.rejected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .btn-sm {
+            padding: 5px 12px;
+            font-size: 12px;
+        }
+        
+        .message {
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .message.success {
+            background-color: #efe;
+            color: #3c3;
+            border: 1px solid #cfc;
+        }
+        
+        .message.error {
+            background-color: #fee;
+            color: #c33;
+            border: 1px solid #fcc;
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <h1>📋 报销管理系统</h1>
+        <div class="nav-links">
+            <a href="{{ url_for('admin_dashboard') }}">首页</a>
+            <a href="{{ url_for('admin_reimbursements') }}">报销管理</a>
+            {% if current_user.is_admin() %}
+            <a href="{{ url_for('admin_auth_codes') }}">授权码</a>
+            <a href="{{ url_for('admin_users') }}">用户</a>
+            {% endif %}
+            <a href="{{ url_for('admin_logs') }}">日志</a>
+            <a href="{{ url_for('admin_logout') }}">退出</a>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div class="card">
+            <h2 style="margin-bottom: 20px;">🔍 搜索筛选</h2>
+            
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="message {{ category }}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+            
+            <form method="GET" class="filter-section">
+                <div class="filter-group">
+                    <label>状态</label>
+                    <select name="status">
+                        <option value="">全部</option>
+                        <option value="pending" {% if current_status == 'pending' %}selected{% endif %}>待处理</option>
+                        <option value="accepted" {% if current_status == 'accepted' %}selected{% endif %}>已受理</option>
+                        <option value="rejected" {% if current_status == 'rejected' %}selected{% endif %}>未受理</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label>部门</label>
+                    <select name="department">
+                        <option value="">全部</option>
+                        {% for dept in all_departments %}
+                        <option value="{{ dept[0] }}" {% if current_department == dept[0] %}selected{% endif %}>{{ dept[0] }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label>开始日期</label>
+                    <input type="date" name="start_date" value="{{ current_start_date or '' }}">
+                </div>
+                
+                <div class="filter-group">
+                    <label>结束日期</label>
+                    <input type="date" name="end_date" value="{{ current_end_date or '' }}">
+                </div>
+                
+                <div class="filter-group">
+                    <label>关键词</label>
+                    <input type="text" name="keyword" placeholder="报销人/用途" value="{{ current_keyword or '' }}">
+                </div>
+                
+                <div class="filter-group" style="display: flex; align-items: flex-end; gap: 10px;">
+                    <button type="submit" class="btn" style="flex: 1;">搜索</button>
+                    <a href="{{ url_for('admin_reimbursements') }}" class="btn btn-reset">重置</a>
+                </div>
+            </form>
+            
+            <h2 style="margin-bottom: 20px;">📊 报销记录列表</h2>
+            
+            {% if reimbursements %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>报销日期</th>
+                        <th>提交时间</th>
+                        <th>部门</th>
+                        <th>报销人</th>
+                        <th>用途</th>
+                        <th>金额</th>
+                        <th>附件</th>
+                        <th>状态</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in reimbursements %}
+                    <tr>
+                        <td>{{ item.id }}</td>
+                        <td>{{ item.submit_date_str }}</td>
+                        <td>{{ item.submitted_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td>{{ item.department }}</td>
+                        <td>{{ item.applicant }}</td>
+                        <td>{{ item.purpose[:30] }}{% if item.purpose|length > 30 %}...{% endif %}</td>
+                        <td>{{ "%.2f"|format(item.amount) }}</td>
+                        <td>{{ item.attachments.count() }}</td>
+                        <td>
+                            <span class="status-badge {{ item.status }}">
+                                {% if item.status == 'pending' %}待处理
+                                {% elif item.status == 'accepted' %}已受理
+                                {% else %}未受理{% endif %}
+                            </span>
+                        </td>
+                        <td>
+                            <a href="{{ url_for('admin_reimbursement_detail', id=item.id) }}" class="btn btn-sm">详情</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div style="text-align: center; padding: 40px; color: #999;">暂无数据</div>
+            {% endif %}
+
+            <!-- 分页导航 -->
+            {% if pagination and pagination.pages > 1 %}
+            <div class="pagination" style="display: flex; justify-content: center; align-items: center; margin-top: 30px; gap: 5px;">
+                <!-- 上一页 -->
+                {% if pagination.has_prev %}
+                <a href="{{ url_for('admin_reimbursements', page=pagination.prev_num, status=current_status, department=current_department, start_date=current_start_date, end_date=current_end_date, keyword=current_keyword) }}" class="btn btn-sm">上一页</a>
+                {% else %}
+                <span class="btn btn-sm" style="background: #ccc; cursor: not-allowed;">上一页</span>
+                {% endif %}
+
+                <!-- 页码 -->
+                {% for p in pagination.iter_pages(left_edge=1, left_current=2, right_current=2, right_edge=1) %}
+                    {% if p %}
+                        {% if p == pagination.page %}
+                        <span class="btn btn-sm" style="background: #5568d3;">{{ p }}</span>
+                        {% else %}
+                        <a href="{{ url_for('admin_reimbursements', page=p, status=current_status, department=current_department, start_date=current_start_date, end_date=current_end_date, keyword=current_keyword) }}" class="btn btn-sm">{{ p }}</a>
+                        {% endif %}
+                    {% else %}
+                        <span class="btn btn-sm" style="background: #f9f9f9; color: #999;">...</span>
+                    {% endif %}
+                {% endfor %}
+
+                <!-- 下一页 -->
+                {% if pagination.has_next %}
+                <a href="{{ url_for('admin_reimbursements', page=pagination.next_num, status=current_status, department=current_department, start_date=current_start_date, end_date=current_end_date, keyword=current_keyword) }}" class="btn btn-sm">下一页</a>
+                {% else %}
+                <span class="btn btn-sm" style="background: #ccc; cursor: not-allowed;">下一页</span>
+                {% endif %}
+            </div>
+            
+            <div style="text-align: center; margin-top: 10px; color: #666; font-size: 14px;">
+                显示第 {{ pagination.per_page * (pagination.page - 1) + 1 }} - {% if pagination.per_page * pagination.page < pagination.total %}{{ pagination.per_page * pagination.page }}{% else %}{{ pagination.total }}{% endif %} 条，共 {{ pagination.total }} 条记录
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>

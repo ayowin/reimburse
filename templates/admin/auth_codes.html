@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>授权码管理</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: #f5f5f5;
+        }
+        
+        .navbar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .navbar h1 {
+            font-size: 20px;
+        }
+        
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            margin-left: 20px;
+            padding: 8px 15px;
+            border-radius: 5px;
+            transition: background 0.3s;
+        }
+        
+        .nav-links a:hover {
+            background: rgba(255,255,255,0.2);
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .card h2 {
+            margin-bottom: 20px;
+            color: #333;
+            font-size: 18px;
+        }
+        
+        .auth-code-display {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            border-radius: 15px;
+            text-align: center;
+            margin: 30px 0;
+        }
+        
+        .auth-code-label {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-bottom: 15px;
+        }
+        
+        .auth-code-value {
+            font-size: 48px;
+            font-weight: bold;
+            letter-spacing: 8px;
+            font-family: 'Courier New', monospace;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .auth-code-info {
+            margin-top: 20px;
+            font-size: 13px;
+            opacity: 0.8;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 6px 15px;
+            border-radius: 15px;
+            font-size: 14px;
+            font-weight: 500;
+            margin-top: 10px;
+        }
+        
+        .status-badge.active {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status-badge.inactive {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .btn-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+        }
+        
+        .btn {
+            flex: 1;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-warning {
+            background: #ffc107;
+            color: #333;
+        }
+        
+        .btn-warning:hover {
+            background: #ffca2c;
+        }
+        
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #bb2d3b;
+        }
+        
+        .message {
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .message.success {
+            background-color: #efe;
+            color: #3c3;
+            border: 1px solid #cfc;
+        }
+        
+        .info-box {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        
+        .info-box p {
+            color: #555;
+            line-height: 1.8;
+            font-size: 14px;
+        }
+        
+        .icon-large {
+            font-size: 60px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <h1>🔑 授权码管理</h1>
+        <div class="nav-links">
+            <a href="{{ url_for('admin_dashboard') }}">首页</a>
+            <a href="{{ url_for('admin_reimbursements') }}">报销管理</a>
+            {% if current_user.is_admin() %}
+            <a href="{{ url_for('admin_auth_codes') }}">授权码</a>
+            <a href="{{ url_for('admin_users') }}">用户</a>
+            {% endif %}
+            <a href="{{ url_for('admin_logs') }}">日志</a>
+            <a href="{{ url_for('admin_logout') }}">退出</a>
+        </div>
+    </div>
+    
+    <div class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="message {{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        <div class="card">
+            <h2>全局授权码</h2>
+            
+            <div class="info-box">
+                <p><strong>说明：</strong>系统采用全局唯一授权码机制，所有报销人都使用同一个授权码进行填报。授权码永久有效，不限使用次数。</p>
+            </div>
+            
+            {% if auth_code %}
+            <div class="auth-code-display">
+                <div class="icon-large">🎫</div>
+                <div class="auth-code-label">当前授权码</div>
+                <div class="auth-code-value">{{ auth_code.code }}</div>
+                <div class="auth-code-info">
+                    <div class="status-badge {{ 'active' if auth_code.is_active else 'inactive' }}">
+                        {{ '启用状态' if auth_code.is_active else '已停用' }}
+                    </div>
+                    <div style="margin-top: 15px;">
+                        创建时间：{{ auth_code.created_at.strftime('%Y-%m-%d %H:%M') }}
+                        {% if auth_code.updated_at %}
+                        <br>最后更新：{{ auth_code.updated_at.strftime('%Y-%m-%d %H:%M') }}
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            {% if current_user.is_admin() %}
+            <form method="POST" action="{{ url_for('admin_update_auth_code') }}" style="display: inline;">
+                <div class="btn-group">
+                    <button type="submit" name="action" value="regenerate" class="btn btn-warning" onclick="return confirm('确定要重新生成授权码吗？旧的授权码将立即失效！')">
+                        🔄 重新生成
+                    </button>
+                    <button type="submit" name="action" value="toggle" class="btn {{ 'btn-danger' if auth_code.is_active else 'btn-primary' }}">
+                        {{ '🚫 停用' if auth_code.is_active else '✅ 启用' }}
+                    </button>
+                </div>
+            </form>
+            {% else %}
+            <div class="info-box" style="margin-top: 20px;">
+                <p><strong>提示：</strong>您是操作员，只有管理员才能修改授权码。</p>
+            </div>
+            {% endif %}
+            {% else %}
+            <div style="text-align: center; padding: 40px;">
+                <div class="icon-large">⚠️</div>
+                <p style="color: #666; margin-bottom: 20px;">系统尚未配置授权码</p>
+                {% if current_user.is_admin() %}
+                <form method="POST" action="{{ url_for('admin_update_auth_code') }}">
+                    <button type="submit" name="action" value="create" class="btn btn-primary" style="max-width: 300px;">
+                        🔑 生成授权码
+                    </button>
+                </form>
+                {% else %}
+                <p style="color: #666;">请联系管理员生成授权码</p>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+        
+        <div class="card">
+            <h2>使用说明</h2>
+            <div style="line-height: 2; color: #555;">
+                <p><strong>1.</strong> 授权码是全局唯一的，所有报销人使用同一个授权码</p>
+                <p><strong>2.</strong> 点击"重新生成"会立即生成新的授权码，旧授权码同时失效</p>
+                <p><strong>3.</strong> 停用授权码后，所有报销人都无法访问填报页面</p>
+                <p><strong>4.</strong> 授权码永久有效，不限使用次数</p>
+                <p><strong>5.</strong> 请将授权码提供给需要填报报销的人员</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>填报报销信息</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: #f5f5f5;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 22px;
+        }
+
+        .auth-info {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            padding: 10px;
+            background: #f9f9f9;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        input[type="date"],
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 15px;
+            transition: border-color 0.3s;
+            font-family: inherit;
+        }
+
+        input:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .file-upload {
+            border: 2px dashed #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .file-upload:hover {
+            border-color: #667eea;
+            background: #f9f9ff;
+        }
+
+        .file-upload input[type="file"] {
+            display: none;
+        }
+
+        .file-upload-icon {
+            font-size: 40px;
+            margin-bottom: 10px;
+        }
+
+        .file-list {
+            margin-top: 15px;
+        }
+
+        .file-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px;
+            background: #f9f9f9;
+            border-radius: 6px;
+            margin-bottom: 8px;
+        }
+
+        .file-name {
+            flex: 1;
+            color: #555;
+            font-size: 14px;
+        }
+
+        .file-remove {
+            color: #f44;
+            cursor: pointer;
+            margin-left: 10px;
+            font-weight: bold;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+            margin-top: 10px;
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .message {
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .message.error {
+            background-color: #fee;
+            color: #c33;
+            border: 1px solid #fcc;
+        }
+
+        .required::before {
+            content: "* ";
+            color: #f44;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+        }
+
+        .success-icon {
+            font-size: 80px;
+            margin-bottom: 20px;
+        }
+
+        .modal h1 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 24px;
+        }
+
+        .modal p {
+            color: #666;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📝 填报报销信息</h1>
+
+        <div class="auth-info">
+            授权码：{{ auth_code.code }}
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="message {{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <form method="POST" enctype="multipart/form-data" id="reimbursementForm">
+            <div class="form-group">
+                <label class="required">报销日期</label>
+                <input type="date" name="submit_date" required value="{{ today }}">
+            </div>
+
+            <div class="form-group">
+                <label class="required">报销部门</label>
+                <input type="text" name="department" placeholder="例如：销售部" required>
+            </div>
+
+            <div class="form-group">
+                <label class="required">报销人</label>
+                <input type="text" name="applicant" placeholder="请输入姓名" required>
+            </div>
+
+            <div class="form-group">
+                <label class="required">用途</label>
+                <textarea name="purpose" placeholder="请详细描述报销用途" required></textarea>
+            </div>
+
+            <div class="form-group">
+                <label class="required">金额（元）</label>
+                <input type="number" name="amount" step="0.01" placeholder="0.00" required min="0">
+            </div>
+
+            <div class="form-group">
+                <label>附件上传</label>
+                <div class="file-upload" onclick="document.getElementById('attachments').click()">
+                    <div class="file-upload-icon">📎</div>
+                    <p>点击选择文件</p>
+                    <p style="color: #999; font-size: 12px; margin-top: 5px;">支持图片（JPG/PNG）和 PDF 格式，最大 16MB</p>
+                    <input type="file" id="attachments" name="attachments" multiple accept="image/*,.pdf" onchange="handleFiles(this.files)">
+                </div>
+                <div class="file-list" id="fileList"></div>
+            </div>
+
+            <button type="submit" class="btn">提交</button>
+        </form>
+    </div>
+
+    <!-- 提交成功弹窗 -->
+    <div id="successModal" class="modal">
+        <div class="modal-content">
+            <div class="success-icon">✅</div>
+            <h1>提交成功！</h1>
+            <p>您的报销信息已成功提交<br>管理员将尽快审核</p>
+            <div class="btn-group">
+                <button id="continueBtn" class="btn">继续填报</button>
+                <button id="exitBtn" class="btn btn-secondary">退出</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 设置默认日期为今天
+        const dateInput = document.querySelector('input[name="submit_date"]');
+        if (dateInput) {
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            dateInput.value = `${year}-${month}-${day}`;
+        }
+
+        let selectedFiles = [];
+
+        function handleFiles(files) {
+            const fileList = document.getElementById('fileList');
+
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+
+                // 验证文件类型
+                const validTypes = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'];
+                if (!validTypes.includes(file.type)) {
+                    alert(`不支持的文件格式：${file.name}。只支持图片和 PDF 文件。`);
+                    continue;
+                }
+
+                // 验证文件大小（16MB）
+                if (file.size > 16 * 1024 * 1024) {
+                    alert(`文件过大：${file.name}。最大支持 16MB。`);
+                    continue;
+                }
+
+                selectedFiles.push(file);
+
+                const fileItem = document.createElement('div');
+                fileItem.className = 'file-item';
+                fileItem.innerHTML = `
+                    <span class="file-name">${file.name}</span>
+                    <span class="file-remove" onclick="removeFile(${selectedFiles.length - 1}, this)">✕</span>
+                `;
+                fileList.appendChild(fileItem);
+            }
+
+            updateFileInput();
+        }
+
+        function removeFile(index, element) {
+            selectedFiles.splice(index, 1);
+            element.parentElement.remove();
+            updateFileInput();
+        }
+
+        function updateFileInput() {
+            const dataTransfer = new DataTransfer();
+            selectedFiles.forEach(file => dataTransfer.items.add(file));
+            document.getElementById('attachments').files = dataTransfer.files;
+        }
+
+        // 表单提交处理
+        document.getElementById('reimbursementForm').addEventListener('submit', function(e) {
+            const amount = parseFloat(document.querySelector('input[name="amount"]').value);
+            if (isNaN(amount) || amount <= 0) {
+                e.preventDefault();
+                alert('请输入有效的金额');
+                return;
+            }
+
+            // 使用AJAX提交表单
+            e.preventDefault();
+            const formData = new FormData(this);
+
+            fetch('/submit', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // 显示成功弹窗
+                    document.getElementById('successModal').style.display = 'flex';
+                } else {
+                    alert(data.message || '提交失败，请重试');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('提交失败，请检查网络连接后重试');
+            });
+        });
+
+        // 继续填报按钮
+        document.getElementById('continueBtn').addEventListener('click', function() {
+            // 隐藏弹窗
+            document.getElementById('successModal').style.display = 'none';
+
+            // 清空表单
+            document.querySelectorAll('input[type="text"], input[type="number"], textarea').forEach(input => {
+                input.value = '';
+            });
+
+            // 清空文件选择
+            selectedFiles = [];
+            document.getElementById('fileList').innerHTML = '';
+            updateFileInput();
+
+            // 重置日期为今天
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            dateInput.value = `${year}-${month}-${day}`;
+        });
+
+        // 退出按钮
+        document.getElementById('exitBtn').addEventListener('click', function() {
+            // 返回首页
+            window.location.href = '/';
+        });
+    </script>
+</body>
+</html>
